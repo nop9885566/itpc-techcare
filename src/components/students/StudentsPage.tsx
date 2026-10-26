@@ -56,83 +56,98 @@ export default function StudentsPage() {
   })
 
   return (
-    <div style={{ paddingBottom: 80 }}>
-      {/* App Bar */}
-      <div className="app-bar">
-        <h1 style={{ fontSize: '1.0625rem', flex: 1 }}>นักเรียน</h1>
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '1.25rem 1rem', paddingBottom: '6.5rem' }}>
+      {/* Top Header Card */}
+      <div
+        className="card"
+        style={{
+          padding: '1rem 1.25rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--color-text)' }}>
+            รายชื่อนักเรียน
+          </h1>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: '0.25rem 0 0' }}>
+            แสดง {filtered.length} จากทั้งหมด {students.length} คน
+          </p>
+        </div>
         <button
           className="btn btn-primary btn-sm"
           onClick={() => setShowForm(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', height: 36 }}
         >
           <Plus size={16} />
-          เพิ่ม
+          <span>เพิ่มนักเรียน</span>
         </button>
       </div>
 
-      {/* Filters */}
-      <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
-        <div className="search-wrapper" style={{ marginBottom: '0.5rem' }}>
-          <Search size={16} className="search-icon" />
-          <input
-            className="input"
-            placeholder="ค้นหาชื่อ ชื่อเล่น รหัส..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+      {/* Filters Card */}
+      <div className="card" style={{ padding: '1rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+          <div className="search-wrapper">
+            <Search size={16} className="search-icon" />
+            <input
+              className="input"
+              placeholder="ค้นหาชื่อ, ชื่อเล่น, รหัสนักเรียน..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <select
+              className="input"
+              style={{ flex: 1 }}
+              value={filterGrade}
+              onChange={e => {
+                setFilterGrade(e.target.value)
+                setFilterRoom('')
+              }}
+            >
+              <option value="">ทุกระดับชั้น</option>
+              {grades.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+            <select
+              className="input"
+              style={{ flex: 1 }}
+              value={filterRoom}
+              onChange={e => setFilterRoom(e.target.value)}
+              disabled={!filterGrade}
+            >
+              <option value="">ทุกห้อง</option>
+              {rooms.map(r => (
+                <option key={r} value={String(r)}>ห้อง {r}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <select
-            className="input"
-            style={{ flex: 1 }}
-            value={filterGrade}
-            onChange={e => {
-              setFilterGrade(e.target.value)
-              setFilterRoom('')
-            }}
-          >
-            <option value="">ทุกชั้น</option>
-            {grades.map(g => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-          <select
-            className="input"
-            style={{ flex: 1 }}
-            value={filterRoom}
-            onChange={e => setFilterRoom(e.target.value)}
-            disabled={!filterGrade}
-          >
-            <option value="">ทุกห้อง</option>
-            {rooms.map(r => (
-              <option key={r} value={String(r)}>ห้อง {r}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Student count */}
-      <div style={{ padding: '0.5rem 1rem', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
-        แสดง {filtered.length} จาก {students.length} คน
       </div>
 
       {/* List */}
       {loading ? (
-        <div className="empty-state">
+        <div className="empty-state" style={{ minHeight: '40vh' }}>
           <div className="spinner" />
-          <span>กำลังโหลด...</span>
+          <span style={{ marginTop: '0.75rem', color: 'var(--color-text-muted)' }}>กำลังโหลดรายชื่อนักเรียน...</span>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <UserCircle2 size={40} strokeWidth={1.2} style={{ color: 'var(--color-border)' }} />
-          <p>ไม่พบนักเรียน</p>
+        <div className="card empty-state" style={{ padding: '3rem 1rem' }}>
+          <UserCircle2 size={44} strokeWidth={1.2} style={{ color: 'var(--color-border)' }} />
+          <p style={{ marginTop: '0.5rem', fontWeight: 500 }}>ไม่พบข้อมูลนักเรียน</p>
           {!search && !filterGrade && (
-            <button className="btn btn-outline btn-sm" onClick={() => setShowForm(true)}>
-              <Plus size={15} /> เพิ่มนักเรียน
+            <button className="btn btn-outline btn-sm" onClick={() => setShowForm(true)} style={{ marginTop: '0.5rem' }}>
+              <Plus size={15} /> เพิ่มนักเรียนคนแรก
             </button>
           )}
         </div>
       ) : (
-        <div style={{ padding: '0.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
           {filtered.map(s => (
             <button
               key={s.id}
