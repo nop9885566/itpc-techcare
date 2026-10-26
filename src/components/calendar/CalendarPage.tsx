@@ -246,7 +246,7 @@ export default function CalendarPage() {
                     className={`calendar-cell${!isCurrentMonth ? ' other-month' : ''}${isToday ? ' today' : ''}`}
                     style={{
                       cursor: dayCases.length > 0 ? 'pointer' : 'default',
-                      minHeight: 110,
+                      minHeight: 86,
                     }}
                   >
                     <div className="day-number">{day.getDate()}</div>
@@ -261,8 +261,8 @@ export default function CalendarPage() {
                           {getCaseTypeLabel(c.case_type, c.other_text)}
                         </span>
                         {c.students.length > 0 && (
-                          <span style={{ opacity: 0.85, fontSize: '0.6875rem', display: 'block', marginTop: 1 }}>
-                            ({c.students.length} คน)
+                          <span style={{ opacity: 0.85, fontSize: '0.6875rem', marginLeft: 4 }}>
+                            · {c.students.length} คน
                           </span>
                         )}
                       </span>

@@ -344,26 +344,26 @@ select.input {
   transform: scale(0.97);
 }
 
-/* Bottom Navigation */
+/* Bottom Navigation (Mobile Only) */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(8px);
   border-top: 1px solid var(--color-border);
   display: flex;
   justify-content: center;
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .bottom-nav-inner {
   display: flex;
   width: 100%;
-  max-width: 500px;
+  max-width: 480px;
   justify-content: space-around;
 }
 
@@ -373,37 +373,75 @@ select.input {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  min-height: 56px;
+  gap: 0.2rem;
+  min-height: 54px;
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--color-text-light);
+  color: var(--color-text-muted);
   cursor: pointer;
   border: none;
   background: none;
   font-family: inherit;
   transition: color 0.15s;
-  padding: 0.5rem;
+  padding: 0.35rem 0.5rem;
 }
 .bottom-nav-item.active {
   color: var(--color-primary);
+  font-weight: 600;
 }
 .bottom-nav-item:hover {
   color: var(--color-primary);
 }
 
-/* Top App Bar */
-.app-bar {
-  position: sticky;
-  top: 0;
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  padding: 0.75rem 1rem;
+/* Desktop Navigation Tabs in Top Header */
+.desktop-nav-tabs {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  z-index: 40;
-  min-height: 56px;
+  gap: 0.375rem;
+  background-color: var(--color-surface-alt);
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+}
+
+.desktop-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.875rem;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.desktop-tab:hover {
+  color: var(--color-text);
+}
+
+.desktop-tab.active {
+  background-color: #ffffff;
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Responsive visibility */
+@media (min-width: 641px) {
+  .bottom-nav {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .desktop-nav-tabs {
+    display: none !important;
+  }
 }
 
 /* Modal */
@@ -480,43 +518,55 @@ select.input {
 
 .calendar-cell {
   background-color: var(--color-surface);
-  min-height: 96px;
-  padding: 6px;
+  min-height: 86px;
+  padding: 4px 6px;
   position: relative;
+  transition: background-color 0.15s;
+}
+
+.calendar-cell:hover {
+  background-color: #fdfcfa;
 }
 
 .calendar-cell.other-month {
   background-color: var(--color-surface-alt);
+  opacity: 0.65;
+}
+
+.calendar-cell.today {
+  background-color: #faf5ff;
 }
 
 .calendar-cell.today .day-number {
   background-color: var(--color-primary);
   color: #fff;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(159, 119, 180, 0.4);
 }
 
 .day-number {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-text-muted);
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .day-header {
   background-color: var(--color-surface-alt);
   padding: 6px 4px;
   text-align: center;
-  font-size: 0.75rem;
+  font-size: 0.78125rem;
   font-weight: 600;
   color: var(--color-text-muted);
 }
@@ -524,14 +574,14 @@ select.input {
 /* Calendar event pill */
 .event-pill {
   display: block;
-  font-size: 0.75rem;
-  padding: 3px 6px;
+  font-size: 0.71875rem;
+  padding: 2px 5px;
   border-radius: 4px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   cursor: pointer;
   white-space: normal;
   word-break: break-word;
-  line-height: 1.35;
+  line-height: 1.3;
   transition: opacity 0.15s, transform 0.1s;
 }
 .event-pill:hover {
