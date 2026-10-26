@@ -1,18 +1,28 @@
 'use client'
 
-import React from 'react'
+import { Suspense } from 'react'
+import { useParams } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import CaseDetailPage from '@/components/cases/CaseDetailPage'
 
-export default function CaseDetailRoute({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const resolvedParams = React.use(params)
+function CaseDetailContent() {
+  const params = useParams()
+  const caseId = (params?.id as string) || ''
+  return <CaseDetailPage caseId={caseId} />
+}
+
+export default function CaseDetailRoute() {
   return (
     <AppShell>
-      <CaseDetailPage caseId={resolvedParams.id} />
+      <Suspense
+        fallback={
+          <div className="empty-state" style={{ minHeight: '60vh' }}>
+            <div className="spinner" />
+          </div>
+        }
+      >
+        <CaseDetailContent />
+      </Suspense>
     </AppShell>
   )
 }
