@@ -182,8 +182,14 @@ export default function CalendarPage() {
                       onClick={() => router.push(`/cases/${c.id}`)}
                       title={getCaseTypeLabel(c.case_type, c.other_text)}
                     >
-                      {getCaseTypeLabel(c.case_type, c.other_text).slice(0, 10)}
-                      {c.students.length > 0 && ` ·${c.students.length}`}
+                      <span style={{ fontWeight: 500 }}>
+                        {getCaseTypeLabel(c.case_type, c.other_text)}
+                      </span>
+                      {c.students.length > 0 && (
+                        <span style={{ opacity: 0.85, fontSize: '0.6875rem', display: 'block', marginTop: 1 }}>
+                          ({c.students.length} คน)
+                        </span>
+                      )}
                     </span>
                   ))}
                   {dayCases.length > 3 && (
@@ -256,7 +262,7 @@ export default function CalendarPage() {
                       {c.status === 'planned' ? 'กำหนดการ' : 'เสร็จสิ้น'}
                     </span>
                     <span className={`badge badge-${c.case_type}`} style={{ fontSize: '0.75rem' }}>
-                      {getCaseTypeLabel(c.case_type, c.other_text).slice(0, 20)}
+                      {getCaseTypeLabel(c.case_type, c.other_text)}
                     </span>
                   </div>
                   <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>
