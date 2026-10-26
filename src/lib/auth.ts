@@ -1,4 +1,4 @@
-'use client'
+'use server';
 
 import { AuthUser } from '@/lib/types'
 
