@@ -1,10 +1,17 @@
 import type { Metadata, Viewport } from 'next'
+import { Noto_Sans_Thai } from 'next/font/google'
 import './globals.css'
 
+const notoSansThai = Noto_Sans_Thai({
+  subsets: ['thai', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-noto-sans-thai',
+})
+
 export const metadata: Metadata = {
-  title: 'ITPC Techcare — ระบบดูแลนักเรียนรายเคส',
+  title: 'itpctakecare — ระบบดูแลนักเรียนรายเคส',
   description: 'ระบบบันทึกและติดตามการดูแลนักเรียนรายเคสสำหรับครูที่ปรึกษา โรงเรียน ITPC',
-  manifest: '/manifest.json',
 }
 
 export const viewport: Viewport = {
@@ -21,11 +28,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="th">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
+    <html lang="th" className={notoSansThai.variable}>
       <body>{children}</body>
     </html>
   )

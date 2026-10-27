@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { AuthUser } from '@/lib/types'
-import { getAuthUser, setAuthUser, clearAuthUser } from '@/lib/auth'
+import { getAuthenticatedUser, logoutCaretaker } from '@/lib/queries'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -18,18 +18,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const stored = getAuthUser()
-    setUser(stored)
-    setIsLoading(false)
+    getAuthenticatedUser()
+      .then(setUser)
+      .catch(error => {
+        console.error('Unable to verify the current session.', error)
+        setUser(null)
+      })
+      .finally(() => setIsLoading(false))
   }, [])
 
   const login = useCallback((u: AuthUser) => {
-    setAuthUser(u)
     setUser(u)
   }, [])
 
-  const logout = useCallback(() => {
-    clearAuthUser()
+  const logout = useCallback(async () => {
+    await logoutCaretaker()
     setUser(null)
   }, [])
 

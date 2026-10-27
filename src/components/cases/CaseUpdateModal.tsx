@@ -143,7 +143,7 @@ export default function CaseUpdateModal({
               htmlFor="markDoneCheckbox"
               style={{ fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem' }}
             >
-              <CheckCircle2 size={16} style={{ color: markDone ? '#166534' : 'var(--color-text-muted)' }} />
+              <CheckCircle2 size={16} style={{ color: markDone ? 'var(--color-success-text)' : 'var(--color-text-muted)' }} />
               เปลี่ยนสถานะเคสเป็น &quot;เสร็จสิ้น&quot; (Done)
             </label>
           </div>

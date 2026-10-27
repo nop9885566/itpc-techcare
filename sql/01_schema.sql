@@ -5,7 +5,9 @@
 -- =============================================================================
 
 -- เปิดใช้งาน pgcrypto สำหรับ hash PIN
-create extension if not exists pgcrypto;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+alter extension pgcrypto set schema extensions;
 
 -- -----------------------------------------------------------------------------
 -- ตาราง students (กำหนดไว้แล้ว ไม่เปลี่ยนโครงสร้าง)
@@ -19,10 +21,38 @@ create table if not exists public.students (
   grade         text                     null,
   room          integer                  null,
   gender        text                     null,
+  academic_year integer                  not null default (extract(year from now())::integer + 543),
+  disabled_at   timestamp with time zone null,
   created_at    timestamp with time zone null default now(),
   updated_at    timestamp with time zone null default now(),
-  primary key (id)
+  primary key (id),
+  constraint students_academic_year_check check (academic_year between 2400 and 2700)
 );
+
+alter table public.students
+  add column if not exists academic_year integer,
+  add column if not exists disabled_at timestamp with time zone null;
+
+update public.students
+set academic_year = extract(year from coalesce(created_at, now()))::integer + 543
+where academic_year is null;
+
+alter table public.students
+  alter column academic_year set default (extract(year from now())::integer + 543),
+  alter column academic_year set not null;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'students_academic_year_check'
+      and conrelid = 'public.students'::regclass
+  ) then
+    alter table public.students
+      add constraint students_academic_year_check check (academic_year between 2400 and 2700);
+  end if;
+end;
+$$;
 
 -- -----------------------------------------------------------------------------
 -- ตาราง caretakers (ผู้ดูแล/ครูที่ปรึกษา)
@@ -31,10 +61,50 @@ create table if not exists public.caretakers (
   id         uuid                     not null default gen_random_uuid(),
   name       text                     not null,
   pin_hash   text                     not null,
+  role       text                     not null default 'caretaker',
+  disabled_at timestamp with time zone null,
   created_at timestamp with time zone not null default now(),
   primary key (id),
-  constraint caretakers_name_unique unique (name)
+  constraint caretakers_name_unique unique (name),
+  constraint caretakers_role_check check (role in ('admin', 'caretaker'))
 );
+
+alter table public.caretakers
+  add column if not exists role text not null default 'caretaker',
+  add column if not exists disabled_at timestamp with time zone null;
+
+create table if not exists public.login_attempts (
+  login_name text not null primary key,
+  failed_attempts integer not null default 0,
+  locked_until timestamp with time zone null,
+  updated_at timestamp with time zone not null default now()
+);
+
+alter table public.login_attempts enable row level security;
+revoke all on public.login_attempts from public, anon, authenticated;
+
+create table if not exists public.login_sessions (
+  token_hash bytea not null primary key,
+  caretaker_id uuid not null references public.caretakers (id) on delete cascade,
+  expires_at timestamp with time zone not null,
+  created_at timestamp with time zone not null default now()
+);
+
+alter table public.login_sessions enable row level security;
+revoke all on public.login_sessions from public, anon, authenticated;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'caretakers_role_check'
+      and conrelid = 'public.caretakers'::regclass
+  ) then
+    alter table public.caretakers
+      add constraint caretakers_role_check check (role in ('admin', 'caretaker'));
+  end if;
+end;
+$$;
 
 -- -----------------------------------------------------------------------------
 -- ตาราง cases (เคสการดูแลนักเรียน)
@@ -114,6 +184,14 @@ create index if not exists idx_students_grade_room
 
 create index if not exists idx_students_student_id
   on public.students (student_id);
+
+create index if not exists idx_students_academic_year_active
+  on public.students (academic_year, grade, room)
+  where disabled_at is null;
+
+create index if not exists idx_caretakers_active
+  on public.caretakers (name)
+  where disabled_at is null;
 
 create index if not exists idx_cases_scheduled_at
   on public.cases (scheduled_at);

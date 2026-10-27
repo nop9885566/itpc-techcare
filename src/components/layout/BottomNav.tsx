@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar, Users, LogOut } from 'lucide-react'
+import { Calendar, Users, UserCircle, ShieldCheck } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
 
@@ -12,7 +12,7 @@ const NAV_ITEMS = [
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
 
   return (
     <nav className="bottom-nav" role="navigation" aria-label="เมนูหลัก">
@@ -32,19 +32,26 @@ export default function BottomNav() {
           )
         })}
 
-        {/* User / Logout */}
+        {user?.role === 'admin' && (
+          <button
+            className={`bottom-nav-item${pathname.startsWith('/admin') ? ' active' : ''}`}
+            onClick={() => router.push('/admin')}
+            aria-current={pathname.startsWith('/admin') ? 'page' : undefined}
+          >
+            <ShieldCheck size={22} strokeWidth={1.8} />
+            <span>จัดการระบบ</span>
+          </button>
+        )}
+
         <button
-          className="bottom-nav-item"
-          onClick={() => {
-            if (confirm(`ออกจากระบบ (${user?.name}) ใช่หรือไม่?`)) {
-              logout()
-            }
-          }}
-          aria-label="ออกจากระบบ"
+          className={`bottom-nav-item${pathname.startsWith('/profile') ? ' active' : ''}`}
+          onClick={() => router.push('/profile')}
+          aria-current={pathname.startsWith('/profile') ? 'page' : undefined}
+          aria-label="ข้อมูลส่วนตัว"
         >
-          <LogOut size={22} strokeWidth={1.8} />
+          <UserCircle size={22} strokeWidth={1.8} />
           <span style={{ fontSize: '0.6875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 80 }}>
-            {user?.name ?? 'ออกจากระบบ'}
+            โปรไฟล์
           </span>
         </button>
       </div>

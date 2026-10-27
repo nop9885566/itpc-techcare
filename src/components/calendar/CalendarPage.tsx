@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Plus,
   ChevronLeft,
@@ -33,6 +33,7 @@ type ViewMode = 'month' | 'list'
 
 export default function CalendarPage() {
   const { user } = useAuth()
+  const userId = user?.id
   const router = useRouter()
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -40,31 +41,36 @@ export default function CalendarPage() {
   const [students, setStudents] = useState<Student[]>([])
   const [caretakers, setCaretakers] = useState<Caretaker[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [showMine, setShowMine] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [showForm, setShowForm] = useState(false)
-
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [casesData, studentsData, caretakersData] = await Promise.all([
-        getCasesForCalendar(showMine ? user?.id : null),
-        getStudents(),
-        getCaretakers(),
-      ])
-      setCases(casesData)
-      setStudents(studentsData)
-      setCaretakers(caretakersData)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }, [showMine, user?.id])
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    let active = true
+    Promise.all([
+      getCasesForCalendar(showMine ? userId : null),
+      getStudents(),
+      getCaretakers(),
+    ])
+      .then(([casesData, studentsData, caretakersData]) => {
+        if (!active) return
+        setCases(casesData)
+        setStudents(studentsData)
+        setCaretakers(caretakersData)
+        setLoadError('')
+      })
+      .catch(err => {
+        if (!active) return
+        console.error(err)
+        setLoadError(err instanceof Error ? err.message : 'โหลดข้อมูลปฏิทินไม่สำเร็จ')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [showMine, userId, refreshKey])
 
   const calendarDays = getCalendarDays(currentMonth)
   const today = new Date()
@@ -210,17 +216,31 @@ export default function CalendarPage() {
           <div className="spinner" />
           <span style={{ marginTop: '0.75rem', color: 'var(--color-text-muted)' }}>กำลังโหลดข้อมูลเคส...</span>
         </div>
+      ) : loadError ? (
+        <div className="card empty-state" role="alert" style={{ minHeight: '40vh' }}>
+          <p>{loadError}</p>
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            onClick={() => {
+              setLoading(true)
+              setRefreshKey(key => key + 1)
+            }}
+          >
+            ลองโหลดอีกครั้ง
+          </button>
+        </div>
       ) : viewMode === 'month' ? (
         /* ========== MONTH VIEW ========== */
         <div>
           {/* Calendar Card Container */}
           <div
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--color-surface)',
               borderRadius: 12,
               border: '1px solid var(--color-border)',
               overflow: 'hidden',
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+              boxShadow: '0 1px 3px rgba(48, 45, 50, 0.035)',
             }}
           >
             <div className="calendar-grid" style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
@@ -229,7 +249,7 @@ export default function CalendarPage() {
                   key={d}
                   className="day-header"
                   style={{
-                    color: index === 0 ? '#ef4444' : index === 6 ? '#8b5cf6' : 'var(--color-text-muted)',
+                    color: index === 0 ? 'var(--color-error-text)' : index === 6 ? 'var(--color-primary)' : 'var(--color-text-muted)',
                     padding: '0.625rem 0.25rem',
                   }}
                 >
@@ -251,7 +271,8 @@ export default function CalendarPage() {
                   >
                     <div className="day-number">{day.getDate()}</div>
                     {dayCases.slice(0, 3).map(c => (
-                      <span
+                      <button
+                        type="button"
                         key={c.id}
                         className={`event-pill ${c.status}`}
                         onClick={() => router.push(`/cases/${c.id}`)}
@@ -265,7 +286,7 @@ export default function CalendarPage() {
                             · {c.students.length} คน
                           </span>
                         )}
-                      </span>
+                      </button>
                     ))}
                     {dayCases.length > 3 && (
                       <span
@@ -297,7 +318,7 @@ export default function CalendarPage() {
               gap: '1rem',
               marginTop: '1rem',
               padding: '0.75rem 1rem',
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--color-surface)',
               borderRadius: 8,
               border: '1px solid var(--color-border)',
               fontSize: '0.8125rem',
@@ -312,7 +333,7 @@ export default function CalendarPage() {
                     height: 12,
                     borderRadius: 3,
                     backgroundColor: 'var(--color-planned)',
-                    border: '1px solid rgba(30, 64, 175, 0.3)',
+                    border: '1px solid #cadbe8',
                     display: 'inline-block',
                   }}
                 />
@@ -325,7 +346,7 @@ export default function CalendarPage() {
                     height: 12,
                     borderRadius: 3,
                     backgroundColor: 'var(--color-done)',
-                    border: '1px solid rgba(22, 101, 52, 0.3)',
+                    border: '1px solid #cfe2d4',
                     display: 'inline-block',
                   }}
                 />
@@ -374,7 +395,7 @@ export default function CalendarPage() {
                     width: 4,
                     alignSelf: 'stretch',
                     borderRadius: 4,
-                    backgroundColor: c.status === 'planned' ? 'var(--color-planned-text)' : '#166534',
+                    backgroundColor: c.status === 'planned' ? 'var(--color-planned-text)' : 'var(--color-success-text)',
                     flexShrink: 0,
                   }}
                 />
@@ -420,7 +441,8 @@ export default function CalendarPage() {
           onClose={() => setShowForm(false)}
           onCreated={() => {
             setShowForm(false)
-            loadData()
+            setLoading(true)
+            setRefreshKey(key => key + 1)
           }}
         />
       )}

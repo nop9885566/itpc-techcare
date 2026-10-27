@@ -1,54 +1,42 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Shield, Eye, EyeOff, ChevronDown } from 'lucide-react'
-import { getCaretakers, loginCaretaker } from '@/lib/queries'
+import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
+import { loginCaretaker } from '@/lib/queries'
 import { useAuth } from '@/components/providers/AuthProvider'
-import type { Caretaker } from '@/lib/types'
+import BrandLogo from '@/components/brand/BrandLogo'
 
 export default function LoginPage() {
   const { login } = useAuth()
-  const [caretakers, setCaretakers] = useState<Caretaker[]>([])
-  const [selectedId, setSelectedId] = useState('')
-  const [selectedName, setSelectedName] = useState('')
+  const [name, setName] = useState('')
   const [pin, setPin] = useState('')
   const [showPin, setShowPin] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [loadingCaretakers, setLoadingCaretakers] = useState(true)
-
-  useEffect(() => {
-    getCaretakers()
-      .then(data => {
-        setCaretakers(data)
-        setLoadingCaretakers(false)
-      })
-      .catch(() => setLoadingCaretakers(false))
-  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
 
-    if (!selectedName) {
-      setError('กรุณาเลือกชื่อผู้ดูแล')
+    if (!name.trim()) {
+      setError('กรุณากรอกชื่อบัญชี')
       return
     }
-    if (pin.length < 4) {
-      setError('PIN ต้องมีอย่างน้อย 4 ตัว')
+    if (!/^\d{4,6}$/.test(pin)) {
+      setError('PIN ต้องเป็นตัวเลข 4–6 หลัก')
       return
     }
 
     setLoading(true)
     try {
-      const result = await loginCaretaker(selectedName, pin)
+      const result = await loginCaretaker(name, pin)
       if (result.success && result.caretaker) {
         login(result.caretaker)
       } else {
         setError(result.error ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่')
       }
-    } catch {
-      setError('ไม่สามารถเชื่อมต่อกับระบบได้ กรุณาลองใหม่')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อกับระบบได้ กรุณาลองใหม่')
     } finally {
       setLoading(false)
     }
@@ -68,60 +56,29 @@ export default function LoginPage() {
       <div style={{ width: '100%', maxWidth: '380px' }}>
         {/* Logo / Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 18,
-              backgroundColor: 'var(--color-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1rem',
-            }}
-          >
-            <Shield size={30} color="#fff" />
-          </div>
-          <h1 style={{ fontSize: '1.375rem', marginBottom: '0.25rem' }}>ITPC Techcare</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9375rem' }}>
-            ระบบดูแลนักเรียนรายเคส
-          </p>
+          <BrandLogo large />
         </div>
 
         {/* Login Card */}
         <div className="card animate-in">
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="label" htmlFor="caretaker-select">
-                ชื่อผู้ดูแล
+              <label className="label" htmlFor="caretaker-name">
+                ชื่อบัญชี
               </label>
-              {loadingCaretakers ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem' }}>
-                  <div className="spinner" />
-                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>กำลังโหลด...</span>
-                </div>
-              ) : (
-                <div style={{ position: 'relative' }}>
-                  <select
-                    id="caretaker-select"
-                    className="input"
-                    value={selectedName}
-                    onChange={e => {
-                      const opt = caretakers.find(c => c.name === e.target.value)
-                      setSelectedName(e.target.value)
-                      setSelectedId(opt?.id ?? '')
-                      setError('')
-                    }}
-                  >
-                    <option value="">-- เลือกชื่อ --</option>
-                    {caretakers.map(c => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <input
+                id="caretaker-name"
+                className="input"
+                type="text"
+                value={name}
+                onChange={e => {
+                  setName(e.target.value)
+                  setError('')
+                }}
+                placeholder="กรอกชื่อบัญชี"
+                autoComplete="username"
+                required
+              />
             </div>
 
             <div className="form-group">
@@ -172,9 +129,9 @@ export default function LoginPage() {
               <p
                 style={{
                   fontSize: '0.875rem',
-                  color: '#dc2626',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fecaca',
+                  color: 'var(--color-error-text)',
+                  backgroundColor: 'var(--color-error-bg)',
+                  border: '1px solid var(--color-error-border)',
                   borderRadius: 8,
                   padding: '0.625rem 0.875rem',
                   marginBottom: '1rem',
@@ -211,9 +168,9 @@ export default function LoginPage() {
             lineHeight: 1.6,
           }}
         >
-          ระบบนี้ใช้ anon key ของ Supabase
+          เข้าสู่ระบบสำหรับผู้ดูแลและครูที่ปรึกษา
           <br />
-          ไม่เหมาะกับข้อมูลที่ต้องการความปลอดภัยสูง
+          การเชื่อมต่อข้อมูลถูกตรวจสอบสิทธิ์จากฝั่งเซิร์ฟเวอร์
         </p>
       </div>
     </div>

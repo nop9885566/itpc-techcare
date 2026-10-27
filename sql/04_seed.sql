@@ -33,6 +33,8 @@ on conflict (id) do update set
 -- ผู้ดูแล 3 คน (PIN: 1234 ทุกคน)
 -- ใช้ crypt() เพื่อ hash PIN ด้วย blowfish
 -- -----------------------------------------------------------------------------
+set search_path = public, extensions;
+
 insert into public.caretakers (id, name, pin_hash)
 values
   (

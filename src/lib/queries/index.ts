@@ -1,6 +1,7 @@
 'use server'
 
-import { supabase } from '@/lib/supabase'
+import { createSession, clearSession, getCurrentUser, requireAdmin, requireUser } from '@/lib/serverSession'
+import { getSupabaseClient } from '@/lib/supabase'
 import type {
   Student,
   Caretaker,
@@ -10,71 +11,183 @@ import type {
   StudentWithCaseCount,
   CaseUpdate,
   CaseSignature,
+  AuthUser,
+  UserRole,
 } from '@/lib/types'
 
+function currentAcademicYear(): number {
+  return new Date().getFullYear() + 543
+}
+
+function throwRpcError(data: { success?: boolean; error?: string } | null, fallback: string): void {
+  if (!data?.success) throw new Error(data?.error || fallback)
+}
+
+interface CaseDetailsRow extends Case {
+  caretakers: Caretaker
+  case_students: { student_id: string; students: Student | null }[]
+  case_caretakers: { caretaker_id: string; caretakers: Caretaker | null }[]
+  case_updates: (CaseUpdate & { caretakers: Caretaker | null })[]
+  case_signatures: CaseSignature[]
+}
+
+interface CalendarCaseRow extends Case {
+  creator: Caretaker
+  case_students: { student_id: string; students: Student | null }[]
+  case_caretakers: { caretaker_id: string; caretakers: Caretaker | null }[]
+  case_updates: (CaseUpdate & { caretakers: Caretaker | null })[]
+  case_signatures: CaseSignature[]
+}
+
+interface StudentCaseRelationRow {
+  cases: CaseDetailsRow | CaseDetailsRow[] | null
+}
+
+function isPresent<T>(value: T | null | undefined): value is T {
+  return value !== null && value !== undefined
+}
+
+function mapUpdates(rows: (CaseUpdate & { caretakers: Caretaker | null })[]) {
+  return rows.map(({ caretakers, ...update }) => {
+    if (!caretakers) throw new Error('ไม่พบข้อมูลผู้บันทึกการติดตาม')
+    return { ...update, caretaker: caretakers }
+  })
+}
+
+function mapCaseDetails(row: CaseDetailsRow): CaseWithDetails {
+  return {
+    ...row,
+    creator: row.caretakers,
+    students: row.case_students
+      .map((relation) => relation.students)
+      .filter((student): student is Student => Boolean(student && !student.disabled_at)),
+    caretakers: row.case_caretakers
+      .map((relation) => relation.caretakers)
+      .filter(isPresent),
+    updates: mapUpdates(row.case_updates),
+    signatures: row.case_signatures,
+  }
+}
+
 // ===== AUTH =====
+
+export async function getAuthenticatedUser(): Promise<AuthUser | null> {
+  return getCurrentUser()
+}
 
 export async function loginCaretaker(
   name: string,
   pin: string
-): Promise<{ success: boolean; caretaker?: { id: string; name: string }; error?: string }> {
-  const { data, error } = await supabase.rpc('login_caretaker', {
-    p_name: name,
+): Promise<{ success: boolean; caretaker?: AuthUser; error?: string }> {
+  if (!name.trim() || !/^\d{4,6}$/.test(pin)) {
+    return { success: false, error: 'กรุณากรอกชื่อและ PIN ตัวเลข 4–6 หลัก' }
+  }
+
+  const { data, error } = await (await getSupabaseClient({ anonymous: true })).rpc('login_caretaker', {
+    p_name: name.trim(),
     p_pin: pin,
   })
-  if (error) return { success: false, error: error.message }
-  return data as { success: boolean; caretaker?: { id: string; name: string }; error?: string }
+  if (error) throw error
+
+  const result = data as {
+    success: boolean
+    caretaker?: AuthUser
+    session_token?: string
+    error?: string
+  }
+  if (!result.success || !result.caretaker || !result.session_token) {
+    return { success: false, error: result.error || 'ชื่อผู้ใช้หรือ PIN ไม่ถูกต้อง' }
+  }
+
+  await createSession(result.session_token)
+  return { success: true, caretaker: result.caretaker }
+}
+
+export async function logoutCaretaker(): Promise<void> {
+  await clearSession()
+}
+
+export async function updateOwnProfile(name: string, pin?: string): Promise<AuthUser> {
+  const user = await requireUser()
+  const { data, error } = await (await getSupabaseClient()).rpc('update_caretaker_profile', {
+    p_id: user.id,
+    p_name: name.trim(),
+    p_pin: pin || null,
+  })
+  if (error) throw error
+  throwRpcError(data as { success?: boolean; error?: string }, 'ไม่สามารถแก้ไขข้อมูลส่วนตัวได้')
+  return { ...user, name: name.trim() }
 }
 
 // ===== STUDENTS =====
 
-export async function getStudents(): Promise<Student[]> {
-  const { data, error } = await supabase
+export async function getStudents(academicYear: number | null = currentAcademicYear()): Promise<Student[]> {
+  await requireUser()
+  let query = (await getSupabaseClient())
     .from('students')
     .select('*')
+    .is('disabled_at', null)
     .order('grade')
     .order('room')
     .order('first_name_th')
+  if (academicYear !== null) query = query.eq('academic_year', academicYear)
+  const { data, error } = await query
   if (error) throw error
   return data ?? []
 }
 
 export async function getStudentsWithCaseCount(): Promise<StudentWithCaseCount[]> {
-  const { data, error } = await supabase
+  await requireUser()
+  const { data, error } = await (await getSupabaseClient())
     .from('students')
     .select('*, case_students(count)')
+    .is('disabled_at', null)
+    .order('academic_year', { ascending: false })
     .order('grade')
     .order('room')
     .order('first_name_th')
   if (error) throw error
-  return (data ?? []).map((s: any) => ({
-    ...s,
-    case_count: s.case_students?.[0]?.count ?? 0,
+  return (data ?? []).map((student) => ({
+    ...student,
+    case_count: student.case_students?.[0]?.count ?? 0,
   }))
 }
 
 export async function getStudent(id: string): Promise<Student | null> {
-  const { data, error } = await supabase.from('students').select('*').eq('id', id).single()
-  if (error) return null
+  await requireUser()
+  const { data, error } = await (await getSupabaseClient())
+    .from('students')
+    .select('*')
+    .eq('id', id)
+    .is('disabled_at', null)
+    .maybeSingle()
+  if (error) throw error
   return data
 }
 
 export async function createStudent(
-  student: Omit<Student, 'id' | 'created_at' | 'updated_at'>
+  student: Omit<Student, 'id' | 'created_at' | 'updated_at' | 'disabled_at'>
 ): Promise<Student> {
-  const { data, error } = await supabase.from('students').insert(student).select().single()
+  await requireAdmin()
+  const { data, error } = await (await getSupabaseClient())
+    .from('students')
+    .insert({ ...student, academic_year: student.academic_year || currentAcademicYear() })
+    .select()
+    .single()
   if (error) throw error
   return data
 }
 
 export async function updateStudent(
   id: string,
-  updates: Partial<Omit<Student, 'id' | 'created_at' | 'updated_at'>>
+  updates: Partial<Omit<Student, 'id' | 'created_at' | 'updated_at' | 'disabled_at'>>
 ): Promise<Student> {
-  const { data, error } = await supabase
+  await requireAdmin()
+  const { data, error } = await (await getSupabaseClient())
     .from('students')
     .update(updates)
     .eq('id', id)
+    .is('disabled_at', null)
     .select()
     .single()
   if (error) throw error
@@ -82,19 +195,67 @@ export async function updateStudent(
 }
 
 export async function deleteStudent(id: string): Promise<void> {
-  const { error } = await supabase.from('students').delete().eq('id', id)
+  await requireAdmin()
+  const { error } = await (await getSupabaseClient())
+    .from('students')
+    .update({ disabled_at: new Date().toISOString() })
+    .eq('id', id)
+    .is('disabled_at', null)
   if (error) throw error
 }
 
 // ===== CARETAKERS =====
 
 export async function getCaretakers(): Promise<Caretaker[]> {
-  const { data, error } = await supabase
+  await requireUser()
+  const { data, error } = await (await getSupabaseClient())
     .from('caretakers')
-    .select('id, name, created_at')
+    .select('id, name, role, disabled_at, created_at')
+    .is('disabled_at', null)
     .order('name')
   if (error) throw error
   return data ?? []
+}
+
+export async function getCaretakerAccounts(): Promise<Caretaker[]> {
+  await requireAdmin()
+  const { data, error } = await (await getSupabaseClient())
+    .from('caretakers')
+    .select('id, name, role, disabled_at, created_at')
+    .order('name')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function manageCaretaker(params: {
+  id?: string
+  name: string
+  pin?: string
+  role: UserRole
+}): Promise<void> {
+  await requireAdmin()
+  const { data, error } = await (await getSupabaseClient()).rpc('manage_caretaker', {
+    p_id: params.id ?? null,
+    p_name: params.name.trim(),
+    p_pin: params.pin || null,
+    p_role: params.role,
+  })
+  if (error) throw error
+  throwRpcError(data as { success?: boolean; error?: string }, 'ไม่สามารถบันทึกบัญชีได้')
+}
+
+export async function setCaretakerDisabled(id: string, disabled: boolean): Promise<void> {
+  const user = await requireAdmin()
+  if (user.id === id && disabled) {
+    throw new Error('ไม่สามารถปิดบัญชีที่กำลังใช้งานอยู่ได้')
+  }
+
+  const { data, error } = await (await getSupabaseClient()).rpc('set_caretaker_disabled', {
+    p_id: id,
+    p_disabled: disabled,
+  })
+  if (error) throw error
+  throwRpcError(data as { success?: boolean; error?: string }, 'ไม่สามารถเปลี่ยนสถานะบัญชีได้')
 }
 
 // ===== CASES =====
@@ -108,12 +269,13 @@ export async function createCaseFull(params: {
   student_ids: string[]
   caretaker_ids: string[]
 }): Promise<{ success: boolean; case_id?: string; error?: string }> {
-  const { data, error } = await supabase.rpc('create_case_full', {
+  const user = await requireUser()
+  const { data, error } = await (await getSupabaseClient()).rpc('create_case_full', {
     p_case_type: params.case_type,
     p_other_text: params.other_text,
     p_details: params.details,
     p_scheduled_at: params.scheduled_at,
-    p_created_by: params.created_by,
+    p_created_by: user.id,
     p_student_ids: params.student_ids,
     p_caretaker_ids: params.caretaker_ids,
   })
@@ -131,7 +293,8 @@ export async function updateCaseFull(params: {
   student_ids: string[]
   caretaker_ids: string[]
 }): Promise<{ success: boolean; error?: string }> {
-  const { data, error } = await supabase.rpc('update_case_full', {
+  await requireUser()
+  const { data, error } = await (await getSupabaseClient()).rpc('update_case_full', {
     p_case_id: params.case_id,
     p_case_type: params.case_type,
     p_other_text: params.other_text,
@@ -146,79 +309,88 @@ export async function updateCaseFull(params: {
 }
 
 export async function deleteCase(id: string): Promise<void> {
-  const { error } = await supabase.from('cases').delete().eq('id', id)
+  await requireUser()
+  const { error } = await (await getSupabaseClient()).from('cases').delete().eq('id', id)
   if (error) throw error
 }
 
 export async function getCasesForCalendar(
   caretakerId?: string | null
 ): Promise<CalendarCase[]> {
-  let query = supabase
+  await requireUser()
+  const { data, error } = await (await getSupabaseClient())
     .from('cases')
     .select(`
       *,
+      creator:caretakers!cases_created_by_fkey(id, name, role, disabled_at, created_at),
       case_students(student_id, students(*)),
-      case_caretakers(caretaker_id, caretakers(id, name, created_at))
+      case_caretakers(caretaker_id, caretakers(id, name, role, disabled_at, created_at)),
+      case_updates(*, caretakers(id, name, role, disabled_at, created_at)),
+      case_signatures(*)
     `)
     .order('scheduled_at', { ascending: true })
 
-  const { data, error } = await query
   if (error) throw error
-
-  const cases = (data ?? []).map((c: any) => ({
-    ...c,
-    students: c.case_students?.map((cs: any) => cs.students).filter(Boolean) ?? [],
-    caretakers: c.case_caretakers?.map((cc: any) => cc.caretakers).filter(Boolean) ?? [],
+  const rows = (data ?? []) as CalendarCaseRow[]
+  const cases: CalendarCase[] = rows.map((item) => ({
+    ...item,
+    students: (item.case_students ?? [])
+      .map((relation) => relation.students)
+      .filter((student): student is Student => Boolean(student && !student.disabled_at)),
+    caretakers: (item.case_caretakers ?? [])
+      .map((relation) => relation.caretakers)
+      .filter(isPresent),
+    updates: mapUpdates(item.case_updates),
+    signatures: item.case_signatures ?? [],
   }))
 
   if (caretakerId) {
-    return cases.filter((c: CalendarCase) =>
-      c.caretakers.some(ct => ct.id === caretakerId)
-    )
+    return cases.filter((item) => item.caretakers.some((caretaker) => caretaker.id === caretakerId))
   }
-
   return cases
 }
 
 export async function getCaseWithDetails(id: string): Promise<CaseWithDetails | null> {
-  const { data, error } = await supabase
+  await requireUser()
+  const { data, error } = await (await getSupabaseClient())
     .from('cases')
     .select(`
       *,
-      caretakers!cases_created_by_fkey(id, name, created_at),
+      caretakers!cases_created_by_fkey(id, name, role, disabled_at, created_at),
       case_students(student_id, students(*)),
-      case_caretakers(caretaker_id, caretakers(id, name, created_at)),
-      case_updates(*, caretakers(id, name, created_at)),
+      case_caretakers(caretaker_id, caretakers(id, name, role, disabled_at, created_at)),
+      case_updates(*, caretakers(id, name, role, disabled_at, created_at)),
       case_signatures(*)
     `)
     .eq('id', id)
-    .single()
+    .maybeSingle()
 
-  if (error) return null
-
-  return {
-    ...data,
-    creator: data.caretakers,
-    students: data.case_students?.map((cs: any) => cs.students).filter(Boolean) ?? [],
-    caretakers: data.case_caretakers?.map((cc: any) => cc.caretakers).filter(Boolean) ?? [],
-    updates: (data.case_updates ?? []).map((u: any) => ({
-      ...u,
-      caretaker: u.caretakers,
-    })),
-    signatures: data.case_signatures ?? [],
-  }
+  if (error) throw error
+  if (!data) return null
+  return mapCaseDetails(data as CaseDetailsRow)
 }
 
 export async function getCasesForStudent(studentId: string): Promise<CaseWithDetails[]> {
+  await requireUser()
+  const supabase = await getSupabaseClient()
+  const { data: student, error: studentError } = await supabase
+    .from('students')
+    .select('id')
+    .eq('id', studentId)
+    .is('disabled_at', null)
+    .maybeSingle()
+  if (studentError) throw studentError
+  if (!student) return []
+
   const { data, error } = await supabase
     .from('case_students')
     .select(`
       cases(
         *,
-        caretakers!cases_created_by_fkey(id, name, created_at),
+        caretakers!cases_created_by_fkey(id, name, role, disabled_at, created_at),
         case_students(student_id, students(*)),
-        case_caretakers(caretaker_id, caretakers(id, name, created_at)),
-        case_updates(*, caretakers(id, name, created_at)),
+        case_caretakers(caretaker_id, caretakers(id, name, role, disabled_at, created_at)),
+        case_updates(*, caretakers(id, name, role, disabled_at, created_at)),
         case_signatures(*)
       )
     `)
@@ -226,18 +398,11 @@ export async function getCasesForStudent(studentId: string): Promise<CaseWithDet
     .order('cases(scheduled_at)', { ascending: false })
 
   if (error) throw error
-
-  return (data ?? [])
-    .map((row: any) => row.cases)
-    .filter(Boolean)
-    .map((c: any) => ({
-      ...c,
-      creator: c.caretakers,
-      students: c.case_students?.map((cs: any) => cs.students).filter(Boolean) ?? [],
-      caretakers: c.case_caretakers?.map((cc: any) => cc.caretakers).filter(Boolean) ?? [],
-      updates: (c.case_updates ?? []).map((u: any) => ({ ...u, caretaker: u.caretakers })),
-      signatures: c.case_signatures ?? [],
-    }))
+  const rows = (data ?? []) as StudentCaseRelationRow[]
+  const relatedCases = rows.flatMap((row) =>
+    Array.isArray(row.cases) ? row.cases : row.cases ? [row.cases] : []
+  )
+  return relatedCases.map(mapCaseDetails)
 }
 
 // ===== CASE UPDATES =====
@@ -250,24 +415,28 @@ export async function addCaseUpdate(params: {
   next_step: string
   mark_done: boolean
 }): Promise<CaseUpdate> {
+  const user = await requireUser()
+  const supabase = await getSupabaseClient()
   const { data: update, error: updateError } = await supabase
     .from('case_updates')
     .insert({
       case_id: params.case_id,
-      caretaker_id: params.caretaker_id,
+      caretaker_id: user.id,
       activity_note: params.activity_note || null,
       result_note: params.result_note || null,
       next_step: params.next_step || null,
     })
     .select()
     .single()
-
   if (updateError) throw updateError
 
   if (params.mark_done) {
-    await supabase.from('cases').update({ status: 'done' }).eq('id', params.case_id)
+    const { error } = await supabase
+      .from('cases')
+      .update({ status: 'done' })
+      .eq('id', params.case_id)
+    if (error) throw error
   }
-
   return update
 }
 
@@ -279,12 +448,18 @@ export async function addSignature(params: {
   signer_role: string
   signature_data: string
 }): Promise<CaseSignature> {
-  const { data, error } = await supabase.from('case_signatures').insert(params).select().single()
+  await requireUser()
+  const { data, error } = await (await getSupabaseClient())
+    .from('case_signatures')
+    .insert(params)
+    .select()
+    .single()
   if (error) throw error
   return data
 }
 
 export async function deleteSignature(id: string): Promise<void> {
-  const { error } = await supabase.from('case_signatures').delete().eq('id', id)
+  await requireUser()
+  const { error } = await (await getSupabaseClient()).from('case_signatures').delete().eq('id', id)
   if (error) throw error
 }

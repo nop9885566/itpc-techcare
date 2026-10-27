@@ -137,7 +137,7 @@ export default function CaseFormModal({
         <form onSubmit={handleSubmit}>
           {/* Students */}
           <div className="form-group">
-            <label className="label">นักเรียน <span style={{ color: '#dc2626' }}>*</span></label>
+            <label className="label">นักเรียน <span style={{ color: 'var(--color-error-text)' }}>*</span></label>
             <StudentPicker
               students={students}
               selectedIds={studentIds}
@@ -147,7 +147,7 @@ export default function CaseFormModal({
 
           {/* Case type */}
           <div className="form-group">
-            <label className="label">ประเภทเคส <span style={{ color: '#dc2626' }}>*</span></label>
+            <label className="label">ประเภทเคส <span style={{ color: 'var(--color-error-text)' }}>*</span></label>
             <div className="radio-group">
               {CASE_TYPE_LABELS.map(opt => (
                 <label key={opt.value} className="radio-option">
@@ -167,7 +167,7 @@ export default function CaseFormModal({
           {/* Other text (conditional) */}
           {caseType === 'other' && (
             <div className="form-group">
-              <label className="label">ระบุประเภทเคส <span style={{ color: '#dc2626' }}>*</span></label>
+              <label className="label">ระบุประเภทเคส <span style={{ color: 'var(--color-error-text)' }}>*</span></label>
               <input
                 type="text"
                 className="input"
@@ -233,7 +233,7 @@ export default function CaseFormModal({
 
           {/* Caretakers */}
           <div className="form-group">
-            <label className="label">ผู้ดูแลที่เกี่ยวข้อง (เลือกได้มากกว่า 1 คน) <span style={{ color: '#dc2626' }}>*</span></label>
+            <label className="label">ผู้ดูแลที่เกี่ยวข้อง (เลือกได้มากกว่า 1 คน) <span style={{ color: 'var(--color-error-text)' }}>*</span></label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               {caretakers.map(ct => {
                 const isSelected = caretakerIds.includes(ct.id)

@@ -6,37 +6,61 @@ import { getStudentsWithCaseCount } from '@/lib/queries'
 import type { StudentWithCaseCount } from '@/lib/types'
 import { useRouter } from 'next/navigation'
 import StudentFormModal from './StudentFormModal'
+import { useAuth } from '@/components/providers/AuthProvider'
 
 export default function StudentsPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [students, setStudents] = useState<StudentWithCaseCount[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [search, setSearch] = useState('')
   const [filterGrade, setFilterGrade] = useState('')
   const [filterRoom, setFilterRoom] = useState('')
+  const [filterYear, setFilterYear] = useState(String(new Date().getFullYear() + 543))
   const [showForm, setShowForm] = useState(false)
 
   const loadStudents = useCallback(async () => {
-    setLoading(true)
     try {
       const data = await getStudentsWithCaseCount()
       setStudents(data)
+      setLoadError('')
     } catch (err) {
       console.error(err)
+      setLoadError(err instanceof Error ? err.message : 'โหลดรายชื่อนักเรียนไม่สำเร็จ')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    loadStudents()
-  }, [loadStudents])
+    let active = true
+    getStudentsWithCaseCount()
+      .then(data => {
+        if (!active) return
+        setStudents(data)
+        setLoadError('')
+      })
+      .catch(err => {
+        if (!active) return
+        console.error(err)
+        setLoadError(err instanceof Error ? err.message : 'โหลดรายชื่อนักเรียนไม่สำเร็จ')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [])
 
   const grades = Array.from(new Set(students.map(s => s.grade).filter(Boolean))).sort() as string[]
+  const academicYears = Array.from(new Set([
+    new Date().getFullYear() + 543,
+    ...students.map(student => student.academic_year),
+  ])).sort((a, b) => b - a)
   const rooms = Array.from(
     new Set(
       students
-        .filter(s => !filterGrade || s.grade === filterGrade)
+      .filter(s => (!filterGrade || s.grade === filterGrade) && (!filterYear || s.academic_year === Number(filterYear)))
         .map(s => s.room)
         .filter(Boolean)
     )
@@ -52,7 +76,8 @@ export default function StudentsPage() {
       s.student_id?.includes(q)
     const matchGrade = !filterGrade || s.grade === filterGrade
     const matchRoom = !filterRoom || s.room === Number(filterRoom)
-    return matchSearch && matchGrade && matchRoom
+    const matchYear = !filterYear || s.academic_year === Number(filterYear)
+    return matchSearch && matchGrade && matchRoom && matchYear
   })
 
   return (
@@ -77,14 +102,16 @@ export default function StudentsPage() {
             แสดง {filtered.length} จากทั้งหมด {students.length} คน
           </p>
         </div>
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={() => setShowForm(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', height: 36 }}
-        >
-          <Plus size={16} />
-          <span>เพิ่มนักเรียน</span>
-        </button>
+        {user?.role === 'admin' && (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowForm(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', height: 36 }}
+          >
+            <Plus size={16} />
+            <span>เพิ่มนักเรียน</span>
+          </button>
+        )}
       </div>
 
       {/* Filters Card */}
@@ -100,6 +127,21 @@ export default function StudentsPage() {
             />
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <select
+              className="input"
+              style={{ flex: 1 }}
+              value={filterYear}
+              onChange={e => {
+                setFilterYear(e.target.value)
+                setFilterRoom('')
+              }}
+              aria-label="ปีการศึกษา"
+            >
+              <option value="">ทุกปีการศึกษา</option>
+              {academicYears.map(year => (
+                <option key={year} value={String(year)}>ปีการศึกษา {year}</option>
+              ))}
+            </select>
             <select
               className="input"
               style={{ flex: 1 }}
@@ -136,11 +178,15 @@ export default function StudentsPage() {
           <div className="spinner" />
           <span style={{ marginTop: '0.75rem', color: 'var(--color-text-muted)' }}>กำลังโหลดรายชื่อนักเรียน...</span>
         </div>
+      ) : loadError ? (
+        <div className="card empty-state" role="alert" style={{ padding: '3rem 1rem' }}>
+          <p>{loadError}</p>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="card empty-state" style={{ padding: '3rem 1rem' }}>
           <UserCircle2 size={44} strokeWidth={1.2} style={{ color: 'var(--color-border)' }} />
           <p style={{ marginTop: '0.5rem', fontWeight: 500 }}>ไม่พบข้อมูลนักเรียน</p>
-          {!search && !filterGrade && (
+          {user?.role === 'admin' && !search && !filterGrade && (
             <button className="btn btn-outline btn-sm" onClick={() => setShowForm(true)} style={{ marginTop: '0.5rem' }}>
               <Plus size={15} /> เพิ่มนักเรียนคนแรก
             </button>
@@ -170,14 +216,14 @@ export default function StudentsPage() {
                   width: 42,
                   height: 42,
                   borderRadius: 12,
-                  backgroundColor: s.gender === 'ชาย' ? '#bfdbfe' : s.gender === 'หญิง' ? '#fbcfe8' : '#e9d5ff',
+                  backgroundColor: s.gender === 'ชาย' ? 'var(--color-gender-male)' : s.gender === 'หญิง' ? 'var(--color-gender-female)' : 'var(--color-gender-other)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                   fontSize: '1.125rem',
                   fontWeight: 600,
-                  color: s.gender === 'ชาย' ? '#1e40af' : s.gender === 'หญิง' ? '#9d174d' : '#5b21b6',
+                  color: 'var(--color-text)',
                 }}
               >
                 {s.first_name_th?.[0] ?? '?'}
@@ -193,7 +239,7 @@ export default function StudentsPage() {
                   )}
                 </div>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
-                  {s.student_id} · {s.grade}/{s.room}
+                  {s.student_id} · {s.grade}/{s.room} · ปี {s.academic_year}
                 </div>
               </div>
 

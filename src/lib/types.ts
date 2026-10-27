@@ -3,6 +3,7 @@
 export type CaseType = 'low_confidence' | 'feel_not_smart' | 'other'
 export type CaseStatus = 'planned' | 'done'
 export type Gender = 'ชาย' | 'หญิง' | 'ไม่ระบุ'
+export type UserRole = 'admin' | 'caretaker'
 
 export interface Student {
   id: string
@@ -13,6 +14,8 @@ export interface Student {
   grade: string | null
   room: number | null
   gender: string | null
+  academic_year: number
+  disabled_at: string | null
   created_at: string | null
   updated_at: string | null
 }
@@ -20,6 +23,8 @@ export interface Student {
 export interface Caretaker {
   id: string
   name: string
+  role: UserRole
+  disabled_at: string | null
   created_at: string
 }
 
@@ -80,12 +85,16 @@ export interface StudentWithCaseCount extends Student {
 export interface CalendarCase extends Case {
   students: Student[]
   caretakers: Caretaker[]
+  creator: Caretaker
+  updates: (CaseUpdate & { caretaker: Caretaker })[]
+  signatures: CaseSignature[]
 }
 
-// Auth types (stored in localStorage)
+// Auth types returned by the server-verified session
 export interface AuthUser {
   id: string
   name: string
+  role: UserRole
 }
 
 // Form types

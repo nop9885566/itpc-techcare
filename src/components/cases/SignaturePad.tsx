@@ -30,13 +30,13 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
       ctx.lineJoin = 'round'
     }, [])
 
-    function getPos(canvas: HTMLCanvasElement, e: MouseEvent | Touch) {
+    function getPos(canvas: HTMLCanvasElement, e: { clientX: number; clientY: number }) {
       const rect = canvas.getBoundingClientRect()
       const scaleX = canvas.width / rect.width
       const scaleY = canvas.height / rect.height
       return {
-        x: ('clientX' in e ? e.clientX : e.clientX) * scaleX - rect.left * scaleX,
-        y: ('clientY' in e ? e.clientY : e.clientY) * scaleY - rect.top * scaleY,
+        x: e.clientX * scaleX - rect.left * scaleX,
+        y: e.clientY * scaleY - rect.top * scaleY,
       }
     }
 
@@ -47,7 +47,7 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
       const pos =
         'touches' in e
           ? getPos(canvas, e.touches[0])
-          : getPos(canvas, e.nativeEvent as MouseEvent)
+          : getPos(canvas, e)
       lastPos.current = pos
     }
 
@@ -59,7 +59,7 @@ const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
       const pos =
         'touches' in e
           ? getPos(canvas, e.touches[0])
-          : getPos(canvas, e.nativeEvent as MouseEvent)
+          : getPos(canvas, e)
 
       ctx.beginPath()
       ctx.moveTo(lastPos.current!.x, lastPos.current!.y)

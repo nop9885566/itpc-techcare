@@ -8,22 +8,21 @@ import {
   FileDown,
   FileSpreadsheet,
   Edit2,
-  Trash2,
-  Clock,
+  Archive,
   PenTool,
   CheckCircle2,
   Clock3,
   AlertTriangle,
-  User,
   GraduationCap,
 } from 'lucide-react'
 import { getStudent, getCasesForStudent, deleteStudent } from '@/lib/queries'
 import type { Student, CaseWithDetails } from '@/lib/types'
 import { getCaseTypeLabel, getStatusLabel } from '@/lib/types'
-import { formatThaiDate, formatThaiDateTime } from '@/lib/dateUtils'
+import { formatThaiDateTime } from '@/lib/dateUtils'
 import { exportStudentReportPDF } from '@/lib/pdfExport'
 import { exportStudentCasesToExcel } from '@/lib/excelExport'
 import StudentFormModal from './StudentFormModal'
+import { useAuth } from '@/components/providers/AuthProvider'
 
 interface StudentDetailPageProps {
   studentId: string
@@ -31,6 +30,7 @@ interface StudentDetailPageProps {
 
 export default function StudentDetailPage({ studentId }: StudentDetailPageProps) {
   const router = useRouter()
+  const { user } = useAuth()
 
   const [student, setStudent] = useState<Student | null>(null)
   const [cases, setCases] = useState<CaseWithDetails[]>([])
@@ -43,29 +43,46 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
   const [exportingPDF, setExportingPDF] = useState(false)
 
   const loadData = useCallback(async () => {
-    setLoading(true)
-    setError('')
     try {
       const [sData, cData] = await Promise.all([
         getStudent(studentId),
         getCasesForStudent(studentId),
       ])
+      setError('')
       if (!sData) {
         setError('ไม่พบข้อมูลนักเรียนคนนี้ หรืออาจถูกลบไปแล้ว')
       } else {
         setStudent(sData)
         setCases(cData)
       }
-    } catch {
-      setError('เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง')
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'โหลดข้อมูลนักเรียนไม่สำเร็จ')
     } finally {
       setLoading(false)
     }
   }, [studentId])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    let active = true
+    Promise.all([getStudent(studentId), getCasesForStudent(studentId)])
+      .then(([studentData, caseData]) => {
+        if (!active) return
+        setError('')
+        if (!studentData) {
+          setError('ไม่พบข้อมูลนักเรียนคนนี้ หรืออาจถูกปิดใช้งานไปแล้ว')
+        } else {
+          setStudent(studentData)
+          setCases(caseData)
+        }
+      })
+      .catch(loadError => {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'โหลดข้อมูลนักเรียนไม่สำเร็จ')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [studentId])
 
   async function handleDelete() {
     setDeleting(true)
@@ -73,7 +90,7 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
       await deleteStudent(studentId)
       router.push('/students')
     } catch {
-      alert('ไม่สามารถลบข้อมูลนักเรียนได้ กรุณาลองใหม่อีกครั้ง')
+      alert('ไม่สามารถปิดข้อมูลนักเรียนได้ กรุณาลองใหม่อีกครั้ง')
       setDeleting(false)
     }
   }
@@ -113,7 +130,7 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
   if (error || !student) {
     return (
       <div className="empty-state" style={{ minHeight: '60vh' }}>
-        <AlertTriangle size={48} style={{ color: '#ef4444' }} />
+        <AlertTriangle size={48} style={{ color: 'var(--color-error-text)' }} />
         <p style={{ marginTop: '0.75rem', fontWeight: 600 }}>{error || 'ไม่พบนักเรียน'}</p>
         <button
           className="btn btn-secondary btn-sm"
@@ -164,7 +181,7 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
             <span className="hidden-mobile">Excel</span>
           </button>
 
-          <button
+          {user?.role === 'admin' && <button
             type="button"
             onClick={() => setShowEditModal(true)}
             className="btn btn-secondary btn-sm"
@@ -173,18 +190,18 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
           >
             <Edit2 size={16} />
             <span className="hidden-mobile">แก้ไข</span>
-          </button>
+          </button>}
 
-          <button
+          {user?.role === 'admin' && <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
             className="btn btn-danger btn-sm"
             style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}
-            aria-label="ลบนักเรียน"
+            aria-label="ปิดข้อมูลนักเรียน"
           >
-            <Trash2 size={16} />
-            <span className="hidden-mobile">ลบ</span>
-          </button>
+            <Archive size={16} />
+            <span className="hidden-mobile">ปิดข้อมูล</span>
+          </button>}
         </div>
       </div>
 
@@ -197,13 +214,13 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
               width: 56,
               height: 56,
               borderRadius: 16,
-              backgroundColor: student.gender === 'ชาย' ? '#bfdbfe' : student.gender === 'หญิง' ? '#fbcfe8' : '#e9d5ff',
+              backgroundColor: student.gender === 'ชาย' ? 'var(--color-gender-male)' : student.gender === 'หญิง' ? 'var(--color-gender-female)' : 'var(--color-gender-other)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.5rem',
               fontWeight: 700,
-              color: student.gender === 'ชาย' ? '#1e40af' : student.gender === 'หญิง' ? '#9d174d' : '#5b21b6',
+              color: 'var(--color-text)',
               flexShrink: 0,
             }}
           >
@@ -225,6 +242,8 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
               <span>•</span>
               <span>ระดับชั้น: <strong style={{ color: 'var(--color-text)' }}>{student.grade || '-'}/{student.room || '-'}</strong></span>
               <span>•</span>
+              <span>ปีการศึกษา: <strong style={{ color: 'var(--color-text)' }}>{student.academic_year}</strong></span>
+              <span>•</span>
               <span>เพศ: <strong style={{ color: 'var(--color-text)' }}>{student.gender || '-'}</strong></span>
             </div>
           </div>
@@ -237,7 +256,7 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
             <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>เคสทั้งหมด</div>
           </div>
           <div style={{ padding: '0.5rem', backgroundColor: 'var(--color-surface)', borderRadius: 8, textAlign: 'center' }}>
-            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#166534' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-success-text)' }}>
               {cases.filter(c => c.status === 'done').length}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>เสร็จสิ้นแล้ว</div>
@@ -288,7 +307,7 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
                     width: 4,
                     alignSelf: 'stretch',
                     borderRadius: 4,
-                    backgroundColor: c.status === 'planned' ? 'var(--color-planned-text)' : '#166534',
+                    backgroundColor: c.status === 'planned' ? 'var(--color-planned-text)' : 'var(--color-success-text)',
                     flexShrink: 0,
                   }}
                 />
@@ -350,16 +369,16 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Student deactivation confirmation */}
       {showDeleteConfirm && (
         <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowDeleteConfirm(false) }}>
           <div className="modal-panel animate-in" style={{ maxWidth: 420 }}>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem', color: '#dc2626' }}>
-              ยืนยันการลบข้อมูลนักเรียน
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-error-text)' }}>
+              ยืนยันการปิดข้อมูลนักเรียน
             </h2>
             <p style={{ fontSize: '0.875rem', color: 'var(--color-text)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-              คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลของ <strong>{student.first_name_th} {student.last_name_th}</strong>?
-              การกระทำนี้จะลบนักเรียนคนนี้ออกจากระบบ
+              ปิดข้อมูลของ <strong>{student.first_name_th} {student.last_name_th}</strong> ใช่หรือไม่?
+              ระบบจะเก็บประวัติเดิมไว้ แต่ไม่นำข้อมูลนักเรียนคนนี้มาแสดงหรือเลือกใช้ในระบบอีก
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button
@@ -376,7 +395,7 @@ export default function StudentDetailPage({ studentId }: StudentDetailPageProps)
                 onClick={handleDelete}
                 disabled={deleting}
               >
-                {deleting ? 'กำลังลบ...' : 'ยืนยันลบนักเรียน'}
+                {deleting ? 'กำลังปิดข้อมูล...' : 'ยืนยันปิดข้อมูล'}
               </button>
             </div>
           </div>

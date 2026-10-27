@@ -17,8 +17,9 @@ update public.students
 set room = 2, grade = 'ม.5'
 where student_id = '67001';
 
--- ลบนักเรียน (ควรระวัง จะ cascade ลบ case_students ที่เกี่ยวข้อง)
-delete from public.students
+-- ปิดข้อมูลนักเรียน (เก็บประวัติเดิมและไม่แสดงในแอป)
+update public.students
+set disabled_at = now()
 where student_id = '67001';
 
 -- ดูนักเรียนทั้งหมดพร้อมจำนวนเคส
@@ -32,6 +33,7 @@ select
   count(cs.case_id) as case_count
 from public.students s
 left join public.case_students cs on cs.student_id = s.id
+where s.disabled_at is null
 group by s.id
 order by s.grade, s.room, s.first_name_th;
 
@@ -48,12 +50,13 @@ update public.caretakers
 set pin_hash = crypt('9999', gen_salt('bf'))
 where name = 'ครูใหม่';
 
--- ลบผู้ดูแล (ระวัง: ไม่สามารถลบได้ถ้าเป็น created_by ของเคส)
-delete from public.caretakers
+-- ปิดบัญชีผู้ดูแล (เก็บประวัติและไม่อนุญาตให้เข้าสู่ระบบ)
+update public.caretakers
+set disabled_at = now()
 where name = 'ครูใหม่';
 
 -- ดูผู้ดูแลทั้งหมด (ไม่แสดง pin_hash)
-select id, name, created_at
+select id, name, role, disabled_at, created_at
 from public.caretakers
 order by created_at;
 

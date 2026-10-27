@@ -8,7 +8,6 @@ import {
   Clock,
   User,
   Users,
-  FileText,
   FileDown,
   Edit2,
   Trash2,
@@ -53,30 +52,46 @@ export default function CaseDetailPage({ caseId }: CaseDetailPageProps) {
   const [allCaretakers, setAllCaretakers] = useState<Caretaker[]>([])
 
   const loadCase = useCallback(async () => {
-    setLoading(true)
-    setError('')
     try {
       const data = await getCaseWithDetails(caseId)
+      setError('')
       if (!data) {
         setError('ไม่พบข้อมูลเคสนี้ในระบบ หรืออาจถูกลบไปแล้ว')
       } else {
         setCaseData(data)
       }
-    } catch {
-      setError('เกิดข้อผิดพลาดในการโหลดข้อมูลเคส กรุณาลองใหม่อีกครั้ง')
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'โหลดข้อมูลเคสไม่สำเร็จ')
     } finally {
       setLoading(false)
     }
   }, [caseId])
 
   useEffect(() => {
-    loadCase()
-  }, [loadCase])
+    let active = true
+    getCaseWithDetails(caseId)
+      .then(data => {
+        if (!active) return
+        setError('')
+        if (!data) {
+          setError('ไม่พบข้อมูลเคสนี้ในระบบ หรืออาจถูกลบไปแล้ว')
+        } else {
+          setCaseData(data)
+        }
+      })
+      .catch(loadError => {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'โหลดข้อมูลเคสไม่สำเร็จ')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [caseId])
 
   // Load auxiliary data for edit modal when needed
   async function handleOpenEdit() {
     try {
-      const [sList, cList] = await Promise.all([getStudents(), getCaretakers()])
+      const [sList, cList] = await Promise.all([getStudents(null), getCaretakers()])
       setAllStudents(sList)
       setAllCaretakers(cList)
       setShowEditModal(true)
@@ -121,7 +136,7 @@ export default function CaseDetailPage({ caseId }: CaseDetailPageProps) {
   if (error || !caseData) {
     return (
       <div className="empty-state" style={{ minHeight: '60vh' }}>
-        <AlertTriangle size={48} style={{ color: '#ef4444' }} />
+        <AlertTriangle size={48} style={{ color: 'var(--color-error-text)' }} />
         <p style={{ marginTop: '0.75rem', fontWeight: 600 }}>{error || 'ไม่พบเคส'}</p>
         <button
           className="btn btn-secondary btn-sm"
@@ -259,13 +274,13 @@ export default function CaseDetailPage({ caseId }: CaseDetailPageProps) {
                   width: 22,
                   height: 22,
                   borderRadius: 11,
-                  backgroundColor: s.gender === 'ชาย' ? '#bfdbfe' : s.gender === 'หญิง' ? '#fbcfe8' : '#e9d5ff',
+                  backgroundColor: s.gender === 'ชาย' ? 'var(--color-gender-male)' : s.gender === 'หญิง' ? 'var(--color-gender-female)' : 'var(--color-gender-other)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: '#374151',
+                  color: 'var(--color-text)',
                 }}
               >
                 {s.first_name_th?.[0] ?? '?'}
@@ -413,11 +428,11 @@ export default function CaseDetailPage({ caseId }: CaseDetailPageProps) {
                   border: '1px solid var(--color-border)',
                   borderRadius: 8,
                   padding: '0.625rem',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--color-surface)',
                   textAlign: 'center',
                 }}
               >
-                <div style={{ height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fcfcfc', borderRadius: 4, marginBottom: '0.5rem' }}>
+                <div style={{ height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--color-surface-alt)', borderRadius: 4, marginBottom: '0.5rem' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={sig.signature_data}
@@ -478,7 +493,7 @@ export default function CaseDetailPage({ caseId }: CaseDetailPageProps) {
       {showDeleteConfirm && (
         <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowDeleteConfirm(false) }}>
           <div className="modal-panel animate-in" style={{ maxWidth: 420 }}>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem', color: '#dc2626' }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-error-text)' }}>
               ยืนยันการลบเคส
             </h2>
             <p style={{ fontSize: '0.875rem', color: 'var(--color-text)', marginBottom: '1.25rem', lineHeight: 1.5 }}>

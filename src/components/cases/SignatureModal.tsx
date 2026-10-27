@@ -64,7 +64,7 @@ export default function SignatureModal({ caseId, onClose, onSaved }: SignatureMo
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="signer-name">ชื่อผู้เซ็น <span style={{ color: '#dc2626' }}>*</span></label>
+          <label className="label" htmlFor="signer-name">ชื่อผู้เซ็น <span style={{ color: 'var(--color-error-text)' }}>*</span></label>
           <input
             id="signer-name"
             className="input"
@@ -91,7 +91,7 @@ export default function SignatureModal({ caseId, onClose, onSaved }: SignatureMo
 
         <div className="form-group">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <label className="label" style={{ margin: 0 }}>ลายเซ็น <span style={{ color: '#dc2626' }}>*</span></label>
+            <label className="label" style={{ margin: 0 }}>ลายเซ็น <span style={{ color: 'var(--color-error-text)' }}>*</span></label>
             <button
               type="button"
               className="btn btn-ghost btn-sm"
@@ -111,9 +111,9 @@ export default function SignatureModal({ caseId, onClose, onSaved }: SignatureMo
         {error && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.625rem 0.875rem', backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca', borderRadius: 8,
-            marginBottom: '1rem', color: '#dc2626', fontSize: '0.875rem',
+            padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-error-bg)',
+            border: '1px solid var(--color-error-border)', borderRadius: 8,
+            marginBottom: '1rem', color: 'var(--color-error-text)', fontSize: '0.875rem',
           }}>
             <AlertCircle size={16} />
             {error}

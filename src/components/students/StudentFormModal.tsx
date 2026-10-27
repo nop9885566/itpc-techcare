@@ -22,6 +22,7 @@ export default function StudentFormModal({ student, onClose, onSaved }: StudentF
   const [grade, setGrade] = useState(student?.grade ?? 'ม.1')
   const [room, setRoom] = useState(String(student?.room ?? '1'))
   const [gender, setGender] = useState(student?.gender ?? 'ไม่ระบุ')
+  const [academicYear, setAcademicYear] = useState(String(student?.academic_year ?? new Date().getFullYear() + 543))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -44,6 +45,7 @@ export default function StudentFormModal({ student, onClose, onSaved }: StudentF
         grade: grade || null,
         room: room ? Number(room) : null,
         gender: gender || null,
+        academic_year: Number(academicYear),
       }
 
       if (student) {
@@ -52,8 +54,8 @@ export default function StudentFormModal({ student, onClose, onSaved }: StudentF
         await createStudent(payload)
       }
       onSaved()
-    } catch (err: any) {
-      setError(err.message ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่')
     } finally {
       setSubmitting(false)
     }
@@ -92,7 +94,7 @@ export default function StudentFormModal({ student, onClose, onSaved }: StudentF
 
             <div className="form-group">
               <label className="label" htmlFor="first-name">
-                ชื่อ <span style={{ color: '#dc2626' }}>*</span>
+                ชื่อ <span style={{ color: 'var(--color-error-text)' }}>*</span>
               </label>
               <input
                 id="first-name"
@@ -154,6 +156,20 @@ export default function StudentFormModal({ student, onClose, onSaved }: StudentF
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label className="label" htmlFor="academic-year">ปีการศึกษา</label>
+              <input
+                id="academic-year"
+                className="input"
+                type="number"
+                min={2400}
+                max={2700}
+                value={academicYear}
+                onChange={e => setAcademicYear(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label className="label">เพศ</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {GENDERS.map(g => (
@@ -191,9 +207,9 @@ export default function StudentFormModal({ student, onClose, onSaved }: StudentF
           {error && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '0.5rem',
-              padding: '0.625rem 0.875rem', backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca', borderRadius: 8,
-              marginBottom: '1rem', color: '#dc2626', fontSize: '0.875rem',
+              padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-error-bg)',
+              border: '1px solid var(--color-error-border)', borderRadius: 8,
+              marginBottom: '1rem', color: 'var(--color-error-text)', fontSize: '0.875rem',
             }}>
               <AlertCircle size={16} />
               {error}
