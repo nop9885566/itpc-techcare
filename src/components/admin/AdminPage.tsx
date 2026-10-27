@@ -105,7 +105,7 @@ export default function AdminPage() {
         <div>
           <div className="eyebrow">ADMINISTRATION</div>
           <h1>จัดการบัญชีผู้ใช้</h1>
-          <p>เพิ่ม แก้ไขบทบาท และปิดบัญชีผู้ดูแลหรือครูที่ปรึกษา</p>
+          <p>เพิ่ม แก้ไขบทบาท และปิดบัญชีผู้ดูแลระบบหรือครูที่ปรึกษา</p>
         </div>
         <button className="btn btn-primary" type="button" onClick={() => setForm({ ...EMPTY_FORM })}>
           <Plus size={17} /> เพิ่มบัญชี
@@ -136,7 +136,7 @@ export default function AdminPage() {
                     <strong>{account.name}</strong>
                     <div className="account-meta">
                       <span className={`account-role role-${account.role}`}>
-                        {account.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ดูแล'}
+                        {account.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครูที่ปรึกษา'}
                       </span>
                       <span className={isActive ? 'status-active' : 'status-disabled'}>
                         {isActive ? 'ใช้งานอยู่' : `ปิดเมื่อ ${formatThaiDateTime(account.disabled_at)}`}
@@ -194,7 +194,7 @@ export default function AdminPage() {
                   value={form.role}
                   onChange={event => setForm({ ...form, role: event.target.value as UserRole })}
                 >
-                  <option value="caretaker">ผู้ดูแล</option>
+                  <option value="caretaker">ครูที่ปรึกษา</option>
                   <option value="admin">ผู้ดูแลระบบ</option>
                 </select>
               </div>

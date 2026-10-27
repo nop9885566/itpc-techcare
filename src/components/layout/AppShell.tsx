@@ -148,7 +148,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
             >
               <UserCircle size={17} style={{ color: 'var(--color-primary)' }} />
               <span style={{ fontWeight: 600 }}>{user.name}</span>
-              <span className="role-pill">{user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ดูแล'}</span>
+              <span className="role-pill">{user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครูที่ปรึกษา'}</span>
             </button>
 
             <button

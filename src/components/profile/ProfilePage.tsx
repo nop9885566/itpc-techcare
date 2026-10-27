@@ -60,7 +60,7 @@ export default function ProfilePage() {
           <div>
             <strong>{user.name}</strong>
             <span className={`account-role role-${user.role}`}>
-              {user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ดูแล'}
+              {user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ครูที่ปรึกษา'}
             </span>
           </div>
         </div>

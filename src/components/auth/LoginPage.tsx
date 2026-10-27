@@ -23,7 +23,7 @@ export default function LoginPage() {
       return
     }
     if (!/^\d{4,6}$/.test(pin)) {
-      setError('PIN ต้องเป็นตัวเลข 4–6 หลัก')
+      setError('PIN')
       return
     }
 
@@ -168,7 +168,7 @@ export default function LoginPage() {
             lineHeight: 1.6,
           }}
         >
-          เข้าสู่ระบบสำหรับผู้ดูแลและครูที่ปรึกษา
+          เข้าสู่ระบบสำหรับผู้ดูแลระบบและครูที่ปรึกษา
           <br />
           
         </p>

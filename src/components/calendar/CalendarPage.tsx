@@ -208,6 +208,15 @@ export default function CalendarPage() {
             <FileSpreadsheet size={15} />
             <span className="hidden-mobile">Excel</span>
           </button>
+
+          <button
+            type="button"
+            className="btn btn-primary calendar-add-desktop"
+            onClick={() => setShowForm(true)}
+          >
+            <Plus size={17} />
+            เพิ่มเคส
+          </button>
         </div>
       </div>
 
@@ -368,7 +377,7 @@ export default function CalendarPage() {
               <CalendarDays size={44} strokeWidth={1.2} style={{ color: 'var(--color-border)' }} />
               <p style={{ marginTop: '0.5rem', fontWeight: 500 }}>ไม่มีเคสในขณะนี้</p>
               <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
-                กดปุ่ม + มุมล่างขวาเพื่อเพิ่มเคสใหม่
+                กดปุ่มเพิ่มเคสเพื่อเริ่มบันทึกข้อมูล
               </p>
             </div>
           ) : (

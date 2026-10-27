@@ -379,6 +379,10 @@ select.input {
   transform: scale(0.97);
 }
 
+.calendar-add-desktop {
+  display: none;
+}
+
 /* Bottom Navigation (Mobile Only) */
 .bottom-nav {
   position: fixed;
@@ -983,6 +987,16 @@ select.input {
 
   .event-pill {
     min-height: 44px;
+  }
+}
+
+@media (min-width: 641px) {
+  .fab {
+    display: none;
+  }
+
+  .calendar-add-desktop {
+    display: inline-flex;
   }
 }
 
