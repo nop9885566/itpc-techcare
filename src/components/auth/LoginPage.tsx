@@ -83,7 +83,7 @@ export default function LoginPage() {
 
             <div className="form-group">
               <label className="label" htmlFor="pin-input">
-                PIN (4–6 หลัก)
+                PIN 
               </label>
               <div style={{ position: 'relative' }}>
                 <input

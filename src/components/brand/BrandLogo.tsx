@@ -9,8 +9,8 @@ export default function BrandLogo({ large = false }: BrandLogoProps) {
     <Image
       src="/takecare/logo.svg"
       alt="ITPC Takecare — ระบบดูแลนักเรียนรายเคส"
-      width={270}
-      height={72}
+      width={341}
+      height={120}
       priority
       style={{ display: 'block', width: '100%', maxWidth: 270, height: 'auto', margin: '0 auto' }}
     />
