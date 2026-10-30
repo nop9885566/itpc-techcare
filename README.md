@@ -55,7 +55,7 @@
    npm run dev
    ```
 
-   เปิด [http://localhost:3000/takecare](http://localhost:3000/takecare)
+   เปิด [http://localhost:3000](http://localhost:3000)
 
 ## สิทธิ์และความปลอดภัย
 

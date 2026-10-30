@@ -7,7 +7,7 @@ interface BrandLogoProps {
 export default function BrandLogo({ large = false }: BrandLogoProps) {
   return large ? (
     <Image
-      src="/takecare/logo.svg"
+      src="/logo.svg"
       alt="ITPC Takecare — ระบบดูแลนักเรียนรายเคส"
       width={341}
       height={120}
@@ -16,7 +16,7 @@ export default function BrandLogo({ large = false }: BrandLogoProps) {
     />
   ) : (
     <Image
-      src="/takecare/icon.svg"
+      src="/icon.svg"
       alt=""
       aria-hidden="true"
       width={42}
