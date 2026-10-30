@@ -83,24 +83,29 @@ export async function loginCaretaker(
     return { success: false, error: 'กรุณากรอกชื่อและ PIN ตัวเลข 4–6 หลัก' }
   }
 
-  const { data, error } = await (await getSupabaseClient({ anonymous: true })).rpc('login_caretaker', {
-    p_name: name.trim(),
-    p_pin: pin,
-  })
-  if (error) throw error
+  try {
+    const { data, error } = await (await getSupabaseClient({ anonymous: true })).rpc('login_caretaker', {
+      p_name: name.trim(),
+      p_pin: pin,
+    })
+    if (error) throw error
 
-  const result = data as {
-    success: boolean
-    caretaker?: AuthUser
-    session_token?: string
-    error?: string
-  }
-  if (!result.success || !result.caretaker || !result.session_token) {
-    return { success: false, error: result.error || 'ชื่อผู้ใช้หรือ PIN ไม่ถูกต้อง' }
-  }
+    const result = data as {
+      success: boolean
+      caretaker?: AuthUser
+      session_token?: string
+      error?: string
+    }
+    if (!result.success || !result.caretaker || !result.session_token) {
+      return { success: false, error: result.error || 'ชื่อผู้ใช้หรือ PIN ไม่ถูกต้อง' }
+    }
 
-  await createSession(result.session_token)
-  return { success: true, caretaker: result.caretaker }
+    await createSession(result.session_token)
+    return { success: true, caretaker: result.caretaker }
+  } catch (error) {
+    console.error('Login server action failed.', error)
+    return { success: false, error: 'ระบบเข้าสู่ระบบขัดข้อง กรุณาลองใหม่ภายหลัง' }
+  }
 }
 
 export async function logoutCaretaker(): Promise<void> {

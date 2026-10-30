@@ -27,6 +27,8 @@
 
    `SUPABASE_ANON_KEY` ต้องเป็น anon key ของโปรเจกต์เดียวกับ URL ระบบคงล็อกอินชื่อ/PIN ของแอป ไม่ใช้ Supabase Auth, JWT หรือ server key; ฐานข้อมูลตรวจ opaque session token แบบสุ่มใน header กับ hash ที่จัดเก็บไว้ก่อนอนุญาต RLS
 
+   เมื่อนำขึ้น Vercel ให้เพิ่ม `SUPABASE_URL` และ `SUPABASE_ANON_KEY` ใน **Project Settings → Environment Variables** สำหรับ environment ที่ใช้งาน แล้ว redeploy โปรเจกต์
+
 3. รันไฟล์ SQL ใน Supabase SQL Editor ตามลำดับ:
 
    1. `sql/01_schema.sql`
@@ -77,3 +79,5 @@
 npm run lint
 npm run build
 ```
+
+หากล็อกอินบน Vercel แสดงข้อผิดพลาด ให้ตรวจ **Functions / Runtime Logs** ของ deployment ก่อน และยืนยันว่า environment variables ของ Supabase ตั้งค่าครบ รวมถึงรันไฟล์ SQL ข้างต้นกับโปรเจกต์ Supabase เดียวกัน
